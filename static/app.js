@@ -703,4 +703,572 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     fetchReleaseNotes(false); // Initial cache load
+    initResearchLab(); // Initialize AI Research Lab features
 });
+
+// ==========================================================================
+// AI RESEARCH LAB CONTROLLER
+// ==========================================================================
+
+function initResearchLab() {
+    // 1. Navigation View Switcher (GCP Release Notes vs AI Research Lab)
+    const navReleaseBtn = document.getElementById('nav-release-notes-btn');
+    const navLabBtn = document.getElementById('nav-research-lab-btn');
+    const releaseView = document.getElementById('release-notes-view');
+    const labView = document.getElementById('research-lab-view');
+    
+    const feedSelectGroup = document.getElementById('feed-select')?.closest('.filter-group');
+    const filterSelectGroup = document.getElementById('filter-select')?.closest('.filter-group');
+    const searchBox = document.querySelector('.search-box');
+    const statsCounter = document.getElementById('stats-counter');
+    
+    if (navReleaseBtn && navLabBtn) {
+        navReleaseBtn.addEventListener('click', () => {
+            navReleaseBtn.classList.add('active');
+            navLabBtn.classList.remove('active');
+            releaseView.classList.add('active');
+            labView.classList.remove('active');
+            
+            // Show release note specific header controls
+            if (elements.exportCsvBtn) elements.exportCsvBtn.style.display = 'inline-flex';
+            if (elements.refreshBtn) elements.refreshBtn.style.display = 'inline-flex';
+            if (feedSelectGroup) feedSelectGroup.style.display = 'block';
+            if (filterSelectGroup) filterSelectGroup.style.display = 'block';
+            if (searchBox) searchBox.style.display = 'flex';
+            if (statsCounter) statsCounter.style.display = 'block';
+        });
+        
+        navLabBtn.addEventListener('click', () => {
+            navLabBtn.classList.add('active');
+            navReleaseBtn.classList.remove('active');
+            labView.classList.add('active');
+            releaseView.classList.remove('active');
+            
+            // Hide release note specific header controls
+            if (elements.exportCsvBtn) elements.exportCsvBtn.style.display = 'none';
+            if (elements.refreshBtn) elements.refreshBtn.style.display = 'none';
+            if (feedSelectGroup) feedSelectGroup.style.display = 'none';
+            if (filterSelectGroup) filterSelectGroup.style.display = 'none';
+            if (searchBox) searchBox.style.display = 'none';
+            if (statsCounter) statsCounter.style.display = 'none';
+        });
+    }
+    
+    // 2. Sub-tab switcher inside Research Lab
+    const labTabs = document.querySelectorAll('.lab-tab-btn');
+    labTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            labTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const targetSubtab = tab.dataset.subtab;
+            
+            document.querySelectorAll('.lab-form-section').forEach(form => {
+                form.style.display = 'none';
+                form.classList.remove('active');
+            });
+            
+            const activeForm = document.getElementById(`form-${targetSubtab}`);
+            if (activeForm) {
+                activeForm.style.display = 'block';
+                activeForm.classList.add('active');
+            }
+        });
+    });
+    
+    // 3. API Key Auth Management
+    const keyInput = document.getElementById('gemini-key-input');
+    const saveKeyBtn = document.getElementById('save-key-btn');
+    const clearKeyBtn = document.getElementById('clear-key-btn');
+    
+    if (keyInput && saveKeyBtn && clearKeyBtn) {
+        // Load saved key from localStorage
+        const savedKey = localStorage.getItem('gemini_api_key');
+        if (savedKey) {
+            keyInput.value = savedKey;
+            keyInput.type = 'password';
+            saveKeyBtn.style.display = 'none';
+            clearKeyBtn.style.display = 'inline-flex';
+        }
+        
+        saveKeyBtn.addEventListener('click', () => {
+            const keyVal = keyInput.value.trim();
+            if (keyVal) {
+                localStorage.setItem('gemini_api_key', keyVal);
+                keyInput.type = 'password';
+                saveKeyBtn.style.display = 'none';
+                clearKeyBtn.style.display = 'inline-flex';
+                showToast('Authentication Saved', 'Gemini API key stored locally.', 'success');
+            } else {
+                showToast('Validation Error', 'Please enter a valid API key.', 'error');
+            }
+        });
+        
+        clearKeyBtn.addEventListener('click', () => {
+            localStorage.removeItem('gemini_api_key');
+            keyInput.value = '';
+            keyInput.type = 'text';
+            saveKeyBtn.style.display = 'inline-flex';
+            clearKeyBtn.style.display = 'none';
+            showToast('Authentication Cleared', 'Gemini API key removed.', 'info');
+        });
+    }
+    
+    // 4. Setup file drag & drop zones
+    setupDragDropZone('doc-drag-area', 'doc-file-input', 'doc-file-name-display', 'doc-remove-file');
+    setupDragDropZone('compare-drag-area-a', 'compare-file-a', 'compare-display-a', 'compare-remove-a');
+    setupDragDropZone('compare-drag-area-b', 'compare-file-b', 'compare-display-b', 'compare-remove-b');
+    
+    // 5. Input keyup validations
+    const inputsToValidate = [
+        'doc-question-input',
+        'web-url-input',
+        'web-question-input',
+        'compare-question-input'
+    ];
+    inputsToValidate.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', validateForms);
+    });
+    
+    // 6. Submit Button Event Handlers
+    document.getElementById('doc-submit-btn')?.addEventListener('click', submitDocQA);
+    document.getElementById('web-submit-btn')?.addEventListener('click', submitWebQA);
+    document.getElementById('compare-submit-btn')?.addEventListener('click', submitCompare);
+    
+    // 7. Results Actions Bindings
+    document.getElementById('btn-copy-response')?.addEventListener('click', () => {
+        if (state.lastSynthesis) {
+            copyTextToClipboard(state.lastSynthesis);
+        }
+    });
+    
+    document.getElementById('btn-linkedin-share-response')?.addEventListener('click', shareSynthesisToLinkedIn);
+    
+    // Run initial form validation
+    validateForms();
+}
+
+/**
+ * Common drag-and-drop Setup helper
+ */
+function setupDragDropZone(zoneId, fileInputId, displayId, removeBtnId) {
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(fileInputId);
+    const display = document.getElementById(displayId);
+    const removeBtn = document.getElementById(removeBtnId);
+    
+    if (!zone || !input) return;
+    
+    zone.addEventListener('click', () => {
+        input.click();
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.add('dragover');
+        }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        zone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('dragover');
+        }, false);
+    });
+    
+    zone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            input.files = files;
+            input.dispatchEvent(new Event('change'));
+        }
+    }, false);
+    
+    input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (file) {
+            zone.style.display = 'none';
+            display.style.display = 'flex';
+            display.querySelector('.file-name').textContent = file.name;
+            showToast('File Attached', `Selected file: ${file.name}`, 'success');
+        } else {
+            zone.style.display = 'flex';
+            display.style.display = 'none';
+        }
+        validateForms();
+    });
+    
+    if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            input.value = '';
+            zone.style.display = 'flex';
+            display.style.display = 'none';
+            validateForms();
+            showToast('File Removed', 'Attachment removed.', 'info');
+        });
+    }
+}
+
+/**
+ * Form Submit Button Enable/Disable Validators
+ */
+function validateForms() {
+    // 1. Doc QA validation
+    const docFile = document.getElementById('doc-file-input')?.files[0];
+    const docQuestion = document.getElementById('doc-question-input')?.value.trim();
+    const docSubmit = document.getElementById('doc-submit-btn');
+    if (docSubmit) {
+        docSubmit.disabled = !docFile || !docQuestion;
+    }
+    
+    // 2. Web QA validation
+    const webUrl = document.getElementById('web-url-input')?.value.trim();
+    const webQuestion = document.getElementById('web-question-input')?.value.trim();
+    const webSubmit = document.getElementById('web-submit-btn');
+    if (webSubmit) {
+        const isValidUrl = webUrl && (webUrl.startsWith('http://') || webUrl.startsWith('https://'));
+        webSubmit.disabled = !isValidUrl || !webQuestion;
+    }
+    
+    // 3. Compare validation
+    const compareA = document.getElementById('compare-file-a')?.files[0];
+    const compareB = document.getElementById('compare-file-b')?.files[0];
+    const compareSubmit = document.getElementById('compare-submit-btn');
+    if (compareSubmit) {
+        compareSubmit.disabled = !compareA || !compareB;
+    }
+}
+
+/**
+ * Terminal UI Helpers
+ */
+function clearTerminal() {
+    const termLog = document.getElementById('lab-terminal-log');
+    const resultsPanel = document.getElementById('lab-results-panel');
+    const resultsCard = document.getElementById('lab-results-card');
+    
+    if (termLog) termLog.innerHTML = '';
+    if (resultsPanel) resultsPanel.style.display = 'block';
+    if (resultsCard) resultsCard.style.display = 'none';
+}
+
+function appendTerminalLine(text, type = 'info') {
+    const termLog = document.getElementById('lab-terminal-log');
+    if (!termLog) return;
+    
+    const line = document.createElement('div');
+    line.className = `terminal-line ${type}`;
+    
+    let icon = 'fa-terminal';
+    if (type === 'success') icon = 'fa-circle-check';
+    else if (type === 'error') icon = 'fa-circle-exclamation';
+    
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    
+    line.innerHTML = `
+        <span style="color: #64748b; margin-right: 0.5rem;">[${time}]</span>
+        <i class="fa-solid ${icon}"></i>
+        <span>$ ${text}</span>
+    `;
+    termLog.appendChild(line);
+    termLog.scrollTop = termLog.scrollHeight;
+}
+
+function setFormLoading(isLoading) {
+    const buttons = [
+        document.getElementById('doc-submit-btn'),
+        document.getElementById('web-submit-btn'),
+        document.getElementById('compare-submit-btn')
+    ];
+    
+    buttons.forEach(btn => {
+        if (!btn) return;
+        if (isLoading) {
+            btn.disabled = true;
+            btn.dataset.originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing Request...`;
+        } else {
+            btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+            validateForms();
+        }
+    });
+}
+
+/**
+ * Render synthesis result and passages onto page card
+ */
+function renderAnalysisResults(synthesis, passages, mode) {
+    const synthesisTextDiv = document.getElementById('ai-synthesis-text');
+    const passagesListDiv = document.getElementById('lab-passages-list');
+    const passagesContainer = document.getElementById('passages-container');
+    const resultsCard = document.getElementById('lab-results-card');
+    
+    if (synthesisTextDiv) {
+        synthesisTextDiv.innerHTML = parseMarkdown(synthesis);
+    }
+    
+    if (passagesListDiv && passagesContainer) {
+        passagesListDiv.innerHTML = '';
+        if (passages && passages.length > 0) {
+            passagesContainer.style.display = 'block';
+            passages.forEach((p, idx) => {
+                const chunk = document.createElement('div');
+                chunk.className = 'passage-chunk';
+                chunk.innerHTML = `<p>${p}</p>`;
+                passagesListDiv.appendChild(chunk);
+            });
+        } else {
+            passagesContainer.style.display = 'none';
+        }
+    }
+    
+    if (resultsCard) {
+        resultsCard.style.display = 'block';
+    }
+    
+    state.lastSynthesis = synthesis;
+    
+    // Smooth scroll down to terminal/results
+    const resultsPanel = document.getElementById('lab-results-panel');
+    if (resultsPanel) {
+        resultsPanel.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+/**
+ * Form Submission Requests
+ */
+async function submitDocQA() {
+    const fileInput = document.getElementById('doc-file-input');
+    const questionInput = document.getElementById('doc-question-input');
+    const file = fileInput?.files[0];
+    const question = questionInput?.value.trim();
+    const apiKey = localStorage.getItem('gemini_api_key') || '';
+    
+    if (!file || !question) return;
+    
+    clearTerminal();
+    appendTerminalLine(`Initializing Document Q&A pipeline...`, 'info');
+    appendTerminalLine(`File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
+    appendTerminalLine(`Query: "${question}"`, 'info');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('question', question);
+    formData.append('apiKey', apiKey);
+    
+    setFormLoading(true);
+    
+    try {
+        appendTerminalLine(`Uploading document to secure local server context...`, 'info');
+        appendTerminalLine(`Parsing pages and extracting text contents...`, 'info');
+        
+        if (apiKey) {
+            appendTerminalLine(`Configured Gemini LLM API Key detected. Synthesizing full response...`, 'info');
+        } else {
+            appendTerminalLine(`No Gemini API Key. Using local keyword semantic relevance extraction...`, 'info');
+        }
+        
+        const response = await fetch('/api/document-qa', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `HTTP error ${response.status}`);
+        }
+        
+        const result = await response.json();
+        appendTerminalLine(`Received analysis response successfully. Rendering output...`, 'success');
+        
+        renderAnalysisResults(result.synthesis, result.passages, result.mode);
+    } catch (err) {
+        console.error(err);
+        appendTerminalLine(`Failed document analysis: ${err.message}`, 'error');
+        showToast('Analysis Failed', err.message, 'error');
+    } finally {
+        setFormLoading(false);
+    }
+}
+
+async function submitWebQA() {
+    const urlInput = document.getElementById('web-url-input');
+    const questionInput = document.getElementById('web-question-input');
+    const url = urlInput?.value.trim();
+    const question = questionInput?.value.trim();
+    const apiKey = localStorage.getItem('gemini_api_key') || '';
+    
+    if (!url || !question) return;
+    
+    clearTerminal();
+    appendTerminalLine(`Initializing Webpage Analysis pipeline...`, 'info');
+    appendTerminalLine(`URL: ${url}`, 'info');
+    appendTerminalLine(`Query: "${question}"`, 'info');
+    
+    setFormLoading(true);
+    
+    try {
+        appendTerminalLine(`Connecting to target server and scraping webpage content...`, 'info');
+        
+        if (apiKey) {
+            appendTerminalLine(`Configured Gemini LLM API Key detected. Synthesizing full web report...`, 'info');
+        } else {
+            appendTerminalLine(`No Gemini API key. Running local text extraction and paragraph ranking...`, 'info');
+        }
+        
+        const response = await fetch('/api/web-qa', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url, question, apiKey })
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `HTTP error ${response.status}`);
+        }
+        
+        const result = await response.json();
+        appendTerminalLine(`Scraped and analyzed webpage successfully. Formatting output...`, 'success');
+        
+        renderAnalysisResults(result.synthesis, result.passages, result.mode);
+    } catch (err) {
+        console.error(err);
+        appendTerminalLine(`Failed webpage analysis: ${err.message}`, 'error');
+        showToast('Webpage Analysis Failed', err.message, 'error');
+    } finally {
+        setFormLoading(false);
+    }
+}
+
+async function submitCompare() {
+    const fileInputA = document.getElementById('compare-file-a');
+    const fileInputB = document.getElementById('compare-file-b');
+    const questionInput = document.getElementById('compare-question-input');
+    const fileA = fileInputA?.files[0];
+    const fileB = fileInputB?.files[0];
+    const question = questionInput?.value.trim();
+    const apiKey = localStorage.getItem('gemini_api_key') || '';
+    
+    if (!fileA || !fileB) return;
+    
+    clearTerminal();
+    appendTerminalLine(`Initializing Multi-Source Comparison pipeline...`, 'info');
+    appendTerminalLine(`Document A: ${fileA.name}`, 'info');
+    appendTerminalLine(`Document B: ${fileB.name}`, 'info');
+    appendTerminalLine(`Comparison Query: "${question || 'Compare and contrast views'}"`, 'info');
+    
+    const formData = new FormData();
+    formData.append('file1', fileA);
+    formData.append('file2', fileB);
+    formData.append('question', question);
+    formData.append('apiKey', apiKey);
+    
+    setFormLoading(true);
+    
+    try {
+        appendTerminalLine(`Uploading both source files to server context...`, 'info');
+        appendTerminalLine(`Parsing document structures and extracting key statements...`, 'info');
+        
+        if (apiKey) {
+            appendTerminalLine(`Configured Gemini LLM API Key detected. Synthesizing full contrast matrix...`, 'info');
+        } else {
+            appendTerminalLine(`No Gemini API Key. Extracting relevant paragraphs from each document...`, 'info');
+        }
+        
+        const response = await fetch('/api/compare-sources', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `HTTP error ${response.status}`);
+        }
+        
+        const result = await response.json();
+        appendTerminalLine(`Source comparison complete. Building comparative layout...`, 'success');
+        
+        renderAnalysisResults(result.synthesis, result.passages, result.mode);
+    } catch (err) {
+        console.error(err);
+        appendTerminalLine(`Failed comparative analysis: ${err.message}`, 'error');
+        showToast('Comparison Failed', err.message, 'error');
+    } finally {
+        setFormLoading(false);
+    }
+}
+
+/**
+ * Synthesis Share on LinkedIn Redirect Composer Modal Integration
+ */
+function shareSynthesisToLinkedIn() {
+    if (!state.lastSynthesis) return;
+    
+    const mockItem = {
+        id: 'synthesis',
+        type: 'AI Synthesis Report',
+        date: new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }),
+        text: state.lastSynthesis,
+        link: 'https://cloud.google.com/vertex-ai'
+    };
+    
+    openComposer(mockItem);
+    switchPlatform('linkedin');
+}
+
+/**
+ * A regex-based Markdown syntax to HTML converter
+ */
+function parseMarkdown(text) {
+    if (!text) return '';
+    let html = text;
+    
+    // Escape standard tags for safety
+    html = html
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    
+    // Code blocks
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Bold
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Headers
+    html = html.replace(/^\s*###\s+(.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^\s*####\s+(.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^\s*##\s+(.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^\s*#\s+(.+)$/gm, '<h1>$1</h1>');
+    
+    // List elements
+    html = html.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
+    
+    // Groups elements
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+    html = html.replace(/<\/ul>\s*<ul>/g, '');
+    
+    // Wrap paragraph paragraphs
+    const blocks = html.split(/\n\s*\n/);
+    const parsedBlocks = blocks.map(block => {
+        const trimmed = block.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('<h') || trimmed.startsWith('<pre') || trimmed.startsWith('<ul') || trimmed.startsWith('<li')) {
+            return trimmed;
+        }
+        return `<p>${trimmed.replace(/\n/g, ' ')}</p>`;
+    });
+    
+    return parsedBlocks.join('\n');
+}

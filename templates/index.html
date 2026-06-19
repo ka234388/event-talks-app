@@ -59,72 +59,256 @@
             </div>
         </header>
 
+        <!-- NAVIGATION TABS -->
+        <nav class="app-nav">
+            <button class="nav-tab active" id="nav-release-notes-btn" title="View GCP Release Notes Feed">
+                <i class="fa-solid fa-square-rss"></i>
+                <span>GCP Release Notes</span>
+            </button>
+            <button class="nav-tab" id="nav-research-lab-btn" title="Open AI Research & Document Q&A Lab">
+                <i class="fa-solid fa-flask-vial"></i>
+                <span>AI Research Lab</span>
+            </button>
+        </nav>
+
         <!-- MAIN LAYOUT -->
         <main class="app-main">
-            <!-- FILTER & SEARCH BAR -->
-            <section class="controls-panel">
-                <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="search-input" placeholder="Search updates (e.g. embeddings, vector, partitioning)..." autocomplete="off">
-                    <button id="clear-search-btn" class="clear-btn" style="display: none;" title="Clear search">
-                        <i class="fa-solid fa-xmark"></i>
+            <!-- VIEW 1: RELEASE NOTES FEED -->
+            <div id="release-notes-view" class="view-panel active">
+                <!-- FILTER & SEARCH BAR -->
+                <section class="controls-panel">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search updates (e.g. embeddings, vector, partitioning)..." autocomplete="off">
+                        <button id="clear-search-btn" class="clear-btn" style="display: none;" title="Clear search">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="feed-select" class="sr-only">Select Feed</label>
+                        <div class="custom-select-wrapper">
+                            <select id="feed-select">
+                                <option value="vertex-ai">Vertex AI (Machine Learning)</option>
+                                <option value="bigquery">BigQuery (Analytics)</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="filter-select" class="sr-only">Filter by type</label>
+                        <div class="custom-select-wrapper">
+                            <select id="filter-select">
+                                <option value="all">All Types</option>
+                                <option value="feature">Features</option>
+                                <option value="changed">Changes</option>
+                                <option value="deprecated">Deprecations</option>
+                                <option value="fixed">Fixes</option>
+                                <option value="update">Updates</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-badge" id="stats-counter">
+                        Loading items...
+                    </div>
+                </section>
+
+                <!-- CONTENT FEED -->
+                <section class="feed-section">
+                    <!-- Loading State -->
+                    <div class="feed-state-indicator" id="loading-indicator">
+                        <div class="spinner-large"></div>
+                        <h3>Fetching latest release notes...</h3>
+                        <p>Connecting to Google Cloud Platform feed</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="feed-state-indicator" id="empty-indicator" style="display: none;">
+                        <div class="empty-icon-wrapper">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <h3>No matching release notes found</h3>
+                        <p>Try adjusting your search keywords or type filters.</p>
+                    </div>
+
+                    <!-- Release Notes Container -->
+                    <div class="notes-grid" id="notes-container" style="display: none;">
+                        <!-- Dynamically populated via JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- VIEW 2: AI RESEARCH LAB -->
+            <div id="research-lab-view" class="view-panel">
+                <!-- AI API Key Config Panel -->
+                <div class="lab-config-panel">
+                    <div class="api-key-header">
+                        <h3><i class="fa-solid fa-key"></i> Gemini API Authentication (Optional)</h3>
+                        <p class="config-desc">Enter a standard Google AI Gemini API Key to upgrade results from local keyword extraction to full LLM synthesis.</p>
+                    </div>
+                    <div class="api-key-input-row">
+                        <label for="gemini-key-input" class="sr-only">Gemini API Key</label>
+                        <input type="password" id="gemini-key-input" placeholder="Enter your AI Gemini API Key (starts with AIzaSy...)" autocomplete="off">
+                        <button id="save-key-btn" class="btn btn-secondary" title="Save API Key"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                        <button id="clear-key-btn" class="btn btn-secondary" style="display: none;" title="Delete Saved Key"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+
+                <!-- Sub-tab controls -->
+                <div class="lab-tab-bar">
+                    <button class="lab-tab-btn active" data-subtab="doc-qa">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Document Q&A</span>
+                    </button>
+                    <button class="lab-tab-btn" data-subtab="web-qa">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>Web Page Q&A</span>
+                    </button>
+                    <button class="lab-tab-btn" data-subtab="compare">
+                        <i class="fa-solid fa-columns"></i>
+                        <span>Compare Sources</span>
                     </button>
                 </div>
-                
-                <div class="filter-group">
-                    <label for="feed-select" class="sr-only">Select Feed</label>
-                    <div class="custom-select-wrapper">
-                        <select id="feed-select">
-                            <option value="vertex-ai">Vertex AI (Machine Learning)</option>
-                            <option value="bigquery">BigQuery (Analytics)</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+
+                <!-- Input Forms Wrapper -->
+                <div class="lab-form-container">
+                    <!-- Tab 1: Document Q&A Form -->
+                    <div class="lab-form-section active" id="form-doc-qa">
+                        <div class="form-group">
+                            <label class="form-label">Upload Local Document (.pdf, .txt, .md)</label>
+                            <div class="drag-drop-area" id="doc-drag-area">
+                                <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
+                                <p class="drag-text">Drag & drop your file here or <span class="browse-link">browse files</span></p>
+                                <p class="file-limits">Supports standard text and PDF files (up to 15MB)</p>
+                                <input type="file" id="doc-file-input" accept=".pdf,.txt,.md,.markdown" style="display: none;">
+                            </div>
+                            <div class="selected-file-display" id="doc-file-name-display" style="display: none;">
+                                <i class="fa-solid fa-file-invoice file-icon"></i>
+                                <span class="file-name">filename.pdf</span>
+                                <button class="remove-file-btn" id="doc-remove-file" title="Remove file"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doc-question-input" class="form-label">Your Question</label>
+                            <textarea id="doc-question-input" placeholder="e.g. What are the steps to troubleshoot network connectivity issues?" rows="3"></textarea>
+                        </div>
+
+                        <button id="doc-submit-btn" class="btn btn-primary btn-lab-submit" disabled>
+                            <i class="fa-solid fa-microchip"></i>
+                            <span>Ask AI Assistant</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab 2: Web Page Q&A Form -->
+                    <div class="lab-form-section" id="form-web-qa" style="display: none;">
+                        <div class="form-group">
+                            <label for="web-url-input" class="form-label">Web Page URL</label>
+                            <input type="url" id="web-url-input" placeholder="e.g. https://www.who.int/news-room/fact-sheets/detail/climate-change-and-health" value="">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="web-question-input" class="form-label">Your Question</label>
+                            <textarea id="web-question-input" placeholder="e.g. What are the primary health risks associated with climate change according to WHO?" rows="3"></textarea>
+                        </div>
+
+                        <button id="web-submit-btn" class="btn btn-primary btn-lab-submit" disabled>
+                            <i class="fa-solid fa-network-wired"></i>
+                            <span>Analyze Webpage</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab 3: Compare Sources Form -->
+                    <div class="lab-form-section" id="form-compare" style="display: none;">
+                        <div class="compare-grid">
+                            <div class="form-group">
+                                <label class="form-label">Source Document A (.pdf, .txt, .md)</label>
+                                <div class="drag-drop-area drag-drop-half" id="compare-drag-area-a">
+                                    <i class="fa-solid fa-file-circle-plus drag-icon"></i>
+                                    <p class="drag-text"><span class="browse-link">Choose Document A</span></p>
+                                    <input type="file" id="compare-file-a" accept=".pdf,.txt,.md,.markdown" style="display: none;">
+                                </div>
+                                <div class="selected-file-display" id="compare-display-a" style="display: none;">
+                                    <i class="fa-solid fa-file file-icon"></i>
+                                    <span class="file-name">doca.txt</span>
+                                    <button class="remove-file-btn" id="compare-remove-a" title="Remove A"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Source Document B (.pdf, .txt, .md)</label>
+                                <div class="drag-drop-area drag-drop-half" id="compare-drag-area-b">
+                                    <i class="fa-solid fa-file-circle-plus drag-icon"></i>
+                                    <p class="drag-text"><span class="browse-link">Choose Document B</span></p>
+                                    <input type="file" id="compare-file-b" accept=".pdf,.txt,.md,.markdown" style="display: none;">
+                                </div>
+                                <div class="selected-file-display" id="compare-display-b" style="display: none;">
+                                    <i class="fa-solid fa-file file-icon"></i>
+                                    <span class="file-name">docb.txt</span>
+                                    <button class="remove-file-btn" id="compare-remove-b" title="Remove B"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="compare-question-input" class="form-label">Comparison Prompt / Question</label>
+                            <textarea id="compare-question-input" placeholder="e.g. Compare and contrast their views on the potential impact on small businesses." rows="3"></textarea>
+                        </div>
+
+                        <button id="compare-submit-btn" class="btn btn-primary btn-lab-submit" disabled>
+                            <i class="fa-solid fa-scale-balanced"></i>
+                            <span>Compare Documents</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="filter-group">
-                    <label for="filter-select" class="sr-only">Filter by type</label>
-                    <div class="custom-select-wrapper">
-                        <select id="filter-select">
-                            <option value="all">All Types</option>
-                            <option value="feature">Features</option>
-                            <option value="changed">Changes</option>
-                            <option value="deprecated">Deprecations</option>
-                            <option value="fixed">Fixes</option>
-                            <option value="update">Updates</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+                <!-- Analysis Terminal / Results Dashboard -->
+                <div class="lab-results-panel" id="lab-results-panel" style="display: none;">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="terminal-title">AI Engine Progress Terminal</span>
+                    </div>
+                    
+                    <div class="terminal-body" id="lab-terminal-log">
+                        <!-- Dynamic analysis steps logs -->
+                    </div>
+
+                    <div class="results-card" id="lab-results-card" style="display: none;">
+                        <header class="results-card-header">
+                            <h3>🤖 AI Research Synthesis</h3>
+                            <div class="results-card-actions">
+                                <button class="btn btn-secondary btn-sm" id="btn-copy-response" title="Copy Synthesis Text">
+                                    <i class="fa-solid fa-copy"></i>
+                                    <span>Copy Analysis</span>
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="btn-linkedin-share-response" title="Compose LinkedIn Post from this Synthesis">
+                                    <i class="fa-brands fa-linkedin"></i>
+                                    <span>Share LinkedIn</span>
+                                </button>
+                            </div>
+                        </header>
+                        <div class="results-card-body">
+                            <!-- Response synthesis -->
+                            <div class="ai-synthesis-content" id="ai-synthesis-text"></div>
+                            
+                            <!-- Extracted Verified Sources Passages -->
+                            <div class="verified-passages-container" id="passages-container" style="display: none;">
+                                <h4><i class="fa-solid fa-circle-nodes"></i> Verified Source Context Passages</h4>
+                                <div class="passages-list" id="lab-passages-list">
+                                    <!-- Dynamic text chunks -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="stats-badge" id="stats-counter">
-                    Loading items...
-                </div>
-            </section>
-
-            <!-- CONTENT FEED -->
-            <section class="feed-section">
-                <!-- Loading State -->
-                <div class="feed-state-indicator" id="loading-indicator">
-                    <div class="spinner-large"></div>
-                    <h3>Fetching latest release notes...</h3>
-                    <p>Connecting to Google Cloud Platform feed</p>
-                </div>
-
-                <!-- Empty State -->
-                <div class="feed-state-indicator" id="empty-indicator" style="display: none;">
-                    <div class="empty-icon-wrapper">
-                        <i class="fa-solid fa-folder-open"></i>
-                    </div>
-                    <h3>No matching release notes found</h3>
-                    <p>Try adjusting your search keywords or type filters.</p>
-                </div>
-
-                <!-- Release Notes Container -->
-                <div class="notes-grid" id="notes-container" style="display: none;">
-                    <!-- Dynamically populated via JS -->
-                </div>
-            </section>
+            </div>
         </main>
 
         <!-- FOOTER -->
