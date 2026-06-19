@@ -1060,3 +1060,173 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 119, 181, 0.45);
 }
+
+/* ==========================================================================
+   THEME SWITCHER COMPONENT STYLES
+   ========================================================================== */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    padding: 0.45rem 0.8rem;
+    border-radius: 30px;
+    margin-left: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+body.light-theme .theme-switch-wrapper {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+.theme-icon {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+/* Toggle Switch slider layout */
+.theme-switch {
+    display: inline-block;
+    height: 18px;
+    position: relative;
+    width: 34px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: #475569;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 34px;
+}
+
+.slider:before {
+    background-color: #fff;
+    bottom: 3px;
+    content: "";
+    height: 12px;
+    left: 3px;
+    position: absolute;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 12px;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+input:checked + .slider {
+    background-color: var(--color-primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(16px);
+}
+
+/* Active icons colors */
+body:not(.light-theme) .moon-icon {
+    color: #f59e0b;
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.3));
+}
+
+body.light-theme .sun-icon {
+    color: #f97316;
+    filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.3));
+}
+
+/* ==========================================================================
+   LIGHT MODE VARIABLE OVERRIDES
+   ========================================================================== */
+body.light-theme {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-glass: rgba(255, 255, 255, 0.65);
+    --bg-glass-hover: rgba(255, 255, 255, 0.85);
+    --bg-modal: rgba(255, 255, 255, 0.98);
+    
+    --border-color: rgba(15, 23, 42, 0.08);
+    --border-color-hover: rgba(15, 23, 42, 0.15);
+    
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    
+    /* Dynamic Shadows for light theme */
+    --shadow-sm: 0 4px 10px -2px rgba(15, 23, 42, 0.04), 0 2px 4px -1px rgba(15, 23, 42, 0.02);
+    --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 16px -6px rgba(15, 23, 42, 0.03);
+    --shadow-lg: 0 20px 40px -12px rgba(15, 23, 42, 0.12);
+    --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.04);
+}
+
+body.light-theme .bg-glow {
+    opacity: 0.14;
+}
+
+body.light-theme .search-box input {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(15, 23, 42, 0.1);
+}
+
+body.light-theme .search-box input:focus {
+    background: #fff;
+    border-color: var(--color-primary);
+}
+
+body.light-theme .custom-select-wrapper select {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(15, 23, 42, 0.1);
+}
+
+body.light-theme .note-card code {
+    background: rgba(15, 23, 42, 0.05);
+    border-color: rgba(15, 23, 42, 0.08);
+    color: #0f172a;
+}
+
+body.light-theme .composer-area {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(15, 23, 42, 0.1);
+}
+
+body.light-theme .release-preview-box {
+    background: rgba(15, 23, 42, 0.02);
+    border-color: rgba(15, 23, 42, 0.06);
+}
+
+body.light-theme .modal-tabs {
+    background: rgba(15, 23, 42, 0.03);
+    border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+body.light-theme .modal-tab.active {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+body.light-theme .modal-footer {
+    background: rgba(15, 23, 42, 0.02);
+    border-top-color: rgba(15, 23, 42, 0.06);
+}
+
+body.light-theme .note-card.selected {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(56, 189, 248, 0.5);
+}
+
+/* Adjust header layouts for toggle switch spacing on mobile */
+@media (max-width: 768px) {
+    .theme-switch-wrapper {
+        margin-left: 0;
+        justify-content: center;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}

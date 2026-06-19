@@ -21,6 +21,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const elements = {
     refreshBtn: document.getElementById('refresh-btn'),
     refreshIcon: document.querySelector('#refresh-btn i'),
+    exportCsvBtn: document.getElementById('export-csv-btn'),
+    themeToggle: document.getElementById('theme-toggle'),
     searchInput: document.getElementById('search-input'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
     filterSelect: document.getElementById('filter-select'),
@@ -479,6 +481,82 @@ function sendPost() {
     }
 }
 
+
+// ==========================================================================
+// UTILITY FUNCTIONS (CSV EXPORT & THEME SWITCH)
+// ==========================================================================
+
+/**
+ * Export currently filtered release note items as a CSV file download
+ */
+function exportToCSV() {
+    if (state.filteredItems.length === 0) {
+        showToast('Export Stalled', 'No visible updates to export.', 'error');
+        return;
+    }
+    
+    const headers = ['Date', 'Type', 'Description', 'Link'];
+    const rows = state.filteredItems.map(item => [
+        item.date,
+        item.type,
+        item.text,
+        item.link
+    ]);
+    
+    // Properly format fields for CSV (escape double quotes, wrap in quotes)
+    const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    try {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'bigquery_release_notes.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('CSV Exported', `Successfully exported ${rows.length} updates.`, 'success');
+    } catch (err) {
+        console.error('CSV export failed:', err);
+        showToast('Export Failed', 'An error occurred during file generation.', 'error');
+    }
+}
+
+/**
+ * Initialize theme based on localStorage preference
+ */
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        if (elements.themeToggle) elements.themeToggle.checked = true;
+    } else {
+        document.body.classList.remove('light-theme');
+        if (elements.themeToggle) elements.themeToggle.checked = false;
+    }
+}
+
+/**
+ * Toggle color scheme theme
+ */
+function toggleTheme() {
+    const isLight = elements.themeToggle.checked;
+    if (isLight) {
+        document.body.classList.add('light-theme');
+        localStorage.setItem('theme', 'light');
+        showToast('Light Theme Active', 'Swapped page theme to Light Mode.', 'info');
+    } else {
+        document.body.classList.remove('light-theme');
+        localStorage.setItem('theme', 'dark');
+        showToast('Dark Theme Active', 'Swapped page theme to Dark Mode.', 'info');
+    }
+}
+
 // ==========================================================================
 // EVENT LISTENERS & INITIALIZATION
 // ==========================================================================
@@ -488,6 +566,16 @@ function initEvents() {
     elements.refreshBtn.addEventListener('click', () => {
         fetchReleaseNotes(true);
     });
+    
+    // Export CSV button click
+    if (elements.exportCsvBtn) {
+        elements.exportCsvBtn.addEventListener('click', exportToCSV);
+    }
+    
+    // Theme toggle switch change
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('change', toggleTheme);
+    }
     
     // Search input typing
     elements.searchInput.addEventListener('input', applyFilters);
@@ -543,6 +631,7 @@ function initProgressRing() {
 
 // Page Load Entrypoint
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initProgressRing();
     initEvents();
     fetchReleaseNotes(false); // Initial cache load

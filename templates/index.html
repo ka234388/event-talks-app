@@ -38,10 +38,24 @@
             </div>
             
             <div class="actions-area">
+                <button id="export-csv-btn" class="btn btn-secondary" title="Export current items to CSV">
+                    <i class="fa-solid fa-file-csv"></i>
+                    <span>Export CSV</span>
+                </button>
+                
                 <button id="refresh-btn" class="btn btn-primary" title="Refresh release notes feed">
                     <i class="fa-solid fa-rotate-right icon-spin-active"></i>
                     <span>Refresh Feed</span>
                 </button>
+                
+                <div class="theme-switch-wrapper" title="Toggle color scheme">
+                    <i class="fa-solid fa-moon theme-icon moon-icon"></i>
+                    <label class="theme-switch" for="theme-toggle">
+                        <input type="checkbox" id="theme-toggle" />
+                        <span class="slider round"></span>
+                    </label>
+                    <i class="fa-solid fa-sun theme-icon sun-icon"></i>
+                </div>
             </div>
         </header>
 
