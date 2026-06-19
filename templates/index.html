@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse, search, and share the latest Google Cloud BigQuery release notes. Easily customize and draft tweets directly from updates.">
+    <title>BigQuery Release Notes Hub & Tweet Composer</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <!-- Background Decorative Gradients -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="bq-icon">
+                    <i class="fa-solid fa-database"></i>
+                    <div class="glow-ring"></div>
+                </div>
+                <div class="header-titles">
+                    <h1>BigQuery Release Notes</h1>
+                    <p class="subtitle">Track updates, filter features, and share highlights on social media instantly.</p>
+                </div>
+            </div>
+            
+            <div class="actions-area">
+                <button id="refresh-btn" class="btn btn-primary" title="Refresh release notes feed">
+                    <i class="fa-solid fa-rotate-right icon-spin-active"></i>
+                    <span>Refresh Feed</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main">
+            <!-- FILTER & SEARCH BAR -->
+            <section class="controls-panel">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search updates (e.g. embeddings, vector, partitioning)..." autocomplete="off">
+                    <button id="clear-search-btn" class="clear-btn" style="display: none;" title="Clear search">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-select" class="sr-only">Filter by type</label>
+                    <div class="custom-select-wrapper">
+                        <select id="filter-select">
+                            <option value="all">All Types</option>
+                            <option value="feature">Features</option>
+                            <option value="changed">Changes</option>
+                            <option value="deprecated">Deprecations</option>
+                            <option value="fixed">Fixes</option>
+                            <option value="update">Updates</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+                
+                <div class="stats-badge" id="stats-counter">
+                    Loading items...
+                </div>
+            </section>
+
+            <!-- CONTENT FEED -->
+            <section class="feed-section">
+                <!-- Loading State -->
+                <div class="feed-state-indicator" id="loading-indicator">
+                    <div class="spinner-large"></div>
+                    <h3>Fetching latest release notes...</h3>
+                    <p>Connecting to Google Cloud Platform feed</p>
+                </div>
+
+                <!-- Empty State -->
+                <div class="feed-state-indicator" id="empty-indicator" style="display: none;">
+                    <div class="empty-icon-wrapper">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <h3>No matching release notes found</h3>
+                    <p>Try adjusting your search keywords or type filters.</p>
+                </div>
+
+                <!-- Release Notes Container -->
+                <div class="notes-grid" id="notes-container" style="display: none;">
+                    <!-- Dynamically populated via JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>Data synced with the official Google Cloud BigQuery RSS Feed.</p>
+            <p class="copyright">&copy; 2026 BigQuery Release Notes Hub. Powered by Python Flask.</p>
+        </footer>
+    </div>
+
+    <!-- SOCIAL POST COMPOSER DIALOG/MODAL -->
+    <div class="modal-overlay" id="composer-modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="modal-title"><i class="fa-solid fa-pen-to-square"></i> Post Composer</h2>
+                <button class="close-btn" id="composer-close" aria-label="Close composer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <!-- Platform Selection Tabs -->
+            <div class="modal-tabs">
+                <button class="modal-tab active" id="tab-x-btn" data-platform="x">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>X / Twitter</span>
+                </button>
+                <button class="modal-tab" id="tab-linkedin-btn" data-platform="linkedin">
+                    <i class="fa-brands fa-linkedin"></i>
+                    <span>LinkedIn</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="release-preview-box">
+                    <span class="preview-badge" id="preview-item-badge">Feature</span>
+                    <span class="preview-date" id="preview-item-date">June 17, 2026</span>
+                    <p class="preview-snippet" id="preview-item-text">Preview content goes here...</p>
+                </div>
+                
+                <div class="composer-area">
+                    <label for="composer-textarea" class="sr-only">Edit your post draft</label>
+                    <textarea id="composer-textarea" placeholder="What's happening?" rows="7"></textarea>
+                    
+                    <div class="composer-controls">
+                        <div class="char-count-wrapper">
+                            <svg class="progress-ring" width="36" height="36">
+                                <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="3" fill="transparent" r="14" cx="18" cy="18"/>
+                                <circle class="progress-ring-indicator" id="char-progress" stroke="#1d9bf0" stroke-width="3" fill="transparent" r="14" cx="18" cy="18"/>
+                            </svg>
+                            <span id="char-counter" class="char-counter">280</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="modal-footer">
+                <button id="composer-copy" class="btn btn-secondary">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>Copy Text</span>
+                </button>
+                <button id="composer-send" class="btn btn-primary">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>Post Tweet</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
