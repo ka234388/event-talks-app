@@ -10,7 +10,8 @@ const state = {
     selectedItem: null,
     searchQuery: '',
     filterType: 'all',
-    activePlatform: 'x' // 'x' or 'linkedin'
+    activePlatform: 'x', // 'x' or 'linkedin'
+    activeFeed: 'vertex-ai' // 'vertex-ai' or 'bigquery'
 };
 
 // SVG Progress Ring Constants
@@ -23,6 +24,9 @@ const elements = {
     refreshIcon: document.querySelector('#refresh-btn i'),
     exportCsvBtn: document.getElementById('export-csv-btn'),
     themeToggle: document.getElementById('theme-toggle'),
+    feedSelect: document.getElementById('feed-select'),
+    headerTitle: document.getElementById('header-title'),
+    headerLogoIcon: document.getElementById('header-logo-icon'),
     searchInput: document.getElementById('search-input'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
     filterSelect: document.getElementById('filter-select'),
@@ -104,8 +108,8 @@ async function fetchReleaseNotes(forceRefresh = false) {
     try {
         setLoadingState(true);
         
-        // Append query parameter if forcing refresh
-        const url = `/api/release-notes${forceRefresh ? '?refresh=true' : ''}`;
+        // Append query parameter for active feed and refresh status
+        const url = `/api/release-notes?feed=${state.activeFeed}${forceRefresh ? '&refresh=true' : ''}`;
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -115,10 +119,11 @@ async function fetchReleaseNotes(forceRefresh = false) {
         const data = await response.json();
         state.items = data.items || [];
         
+        const feedName = state.activeFeed === 'vertex-ai' ? 'Vertex AI' : 'BigQuery';
         if (forceRefresh) {
-            showToast('Feed Refreshed', 'Latest release notes loaded from Google Cloud.', 'success');
+            showToast('Feed Refreshed', `Latest ${feedName} release notes loaded.`, 'success');
         } else {
-            showToast('Feed Sync Complete', `Loaded ${state.items.length} updates successfully.`, 'info');
+            showToast('Feed Sync Complete', `Loaded ${state.items.length} ${feedName} updates successfully.`, 'info');
         }
         
         applyFilters();
@@ -331,15 +336,20 @@ function openComposer(item) {
 }
 
 /**
- * Generates and sets draft text inside composer based on selected platform
+ * Generates and sets draft text inside composer based on selected platform and active feed
  */
 function setComposerDraftText() {
     const item = state.selectedItem;
     if (!item) return;
     
+    const isVertex = state.activeFeed === 'vertex-ai';
+    const productName = isVertex ? 'Vertex AI' : 'BigQuery';
+    
     if (state.activePlatform === 'x') {
-        const header = `BigQuery ${item.type} (${item.date}):\n\n`;
-        const footer = `\n\n#BigQuery #GoogleCloud`;
+        const header = `${productName} ${item.type} (${item.date}):\n\n`;
+        const footer = isVertex 
+            ? `\n\n#${productName.replace(' ', '')} #GoogleCloud #MachineLearning`
+            : `\n\n#${productName} #GoogleCloud`;
         
         // X/Twitter 280 char limit calculations
         const maxSnippetLength = 280 - header.length - footer.length - 20; 
@@ -352,10 +362,13 @@ function setComposerDraftText() {
         elements.composerTextarea.value = `${header}${snippet}${footer}`;
     } else if (state.activePlatform === 'linkedin') {
         // LinkedIn format is typically longer, more professional, and structural
-        const header = `📢 Google Cloud BigQuery Release Update (${item.date})\n\n`;
+        const header = `📢 Google Cloud ${productName} Release Update (${item.date})\n\n`;
         const body = `📂 Category: ${item.type}\n\n${item.text}\n\n`;
         const linkStr = `🔗 Learn more: ${item.link}\n\n`;
-        const tags = `#BigQuery #GoogleCloud #DataAnalytics #DataEngineering #CloudComputing #GCP`;
+        
+        const tags = isVertex
+            ? `#VertexAI #GoogleCloud #MachineLearning #ArtificialIntelligence #ComputerVision #GCP #DataScience`
+            : `#BigQuery #GoogleCloud #DataAnalytics #DataEngineering #CloudComputing #GCP`;
         
         elements.composerTextarea.value = `${header}${body}${linkStr}${tags}`;
     }
@@ -577,6 +590,43 @@ function initEvents() {
         elements.themeToggle.addEventListener('change', toggleTheme);
     }
     
+    // Feed select dropdown change
+    if (elements.feedSelect) {
+        elements.feedSelect.addEventListener('change', () => {
+            state.activeFeed = elements.feedSelect.value;
+            
+            // Clear current search & filter UI
+            elements.searchInput.value = '';
+            elements.filterSelect.value = 'all';
+            
+            // Dynamically update header titles, subtitles, and icons
+            if (state.activeFeed === 'vertex-ai') {
+                if (elements.headerTitle) elements.headerTitle.textContent = 'Vertex AI Release Hub';
+                const subtitle = document.querySelector('.app-header .subtitle');
+                if (subtitle) subtitle.textContent = 'Track Machine Learning & Computer Vision updates and draft posts instantly.';
+                if (elements.headerLogoIcon) {
+                    const iconEl = elements.headerLogoIcon.querySelector('i');
+                    if (iconEl) iconEl.className = 'fa-solid fa-brain';
+                    elements.headerLogoIcon.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)';
+                    elements.headerLogoIcon.style.boxShadow = '0 8px 16px -4px rgba(139, 92, 246, 0.4)';
+                }
+            } else { // bigquery
+                if (elements.headerTitle) elements.headerTitle.textContent = 'BigQuery Release Hub';
+                const subtitle = document.querySelector('.app-header .subtitle');
+                if (subtitle) subtitle.textContent = 'Track Data Warehouse & Analytics updates and draft posts instantly.';
+                if (elements.headerLogoIcon) {
+                    const iconEl = elements.headerLogoIcon.querySelector('i');
+                    if (iconEl) iconEl.className = 'fa-solid fa-database';
+                    elements.headerLogoIcon.style.background = 'linear-gradient(135deg, var(--color-accent) 0%, #ff5e3a 100%)';
+                    elements.headerLogoIcon.style.boxShadow = '0 8px 16px -4px rgba(255, 159, 28, 0.4)';
+                }
+            }
+            
+            // Reload feed
+            fetchReleaseNotes(false);
+        });
+    }
+    
     // Search input typing
     elements.searchInput.addEventListener('input', applyFilters);
     
@@ -634,5 +684,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initProgressRing();
     initEvents();
+    
+    // Set initial logo style to match Vertex AI default
+    if (elements.headerLogoIcon) {
+        elements.headerLogoIcon.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)';
+        elements.headerLogoIcon.style.boxShadow = '0 8px 16px -4px rgba(139, 92, 246, 0.4)';
+    }
+    
     fetchReleaseNotes(false); // Initial cache load
 });

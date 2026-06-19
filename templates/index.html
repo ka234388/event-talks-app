@@ -27,13 +27,13 @@
         <!-- HEADER -->
         <header class="app-header">
             <div class="logo-area">
-                <div class="bq-icon">
-                    <i class="fa-solid fa-database"></i>
+                <div class="bq-icon" id="header-logo-icon">
+                    <i class="fa-solid fa-brain"></i>
                     <div class="glow-ring"></div>
                 </div>
                 <div class="header-titles">
-                    <h1>BigQuery Release Notes</h1>
-                    <p class="subtitle">Track updates, filter features, and share highlights on social media instantly.</p>
+                    <h1 id="header-title">Vertex AI Release Hub</h1>
+                    <p class="subtitle">Track Machine Learning & Computer Vision updates and draft posts instantly.</p>
                 </div>
             </div>
             
@@ -71,6 +71,17 @@
                     </button>
                 </div>
                 
+                <div class="filter-group">
+                    <label for="feed-select" class="sr-only">Select Feed</label>
+                    <div class="custom-select-wrapper">
+                        <select id="feed-select">
+                            <option value="vertex-ai">Vertex AI (Machine Learning)</option>
+                            <option value="bigquery">BigQuery (Analytics)</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+
                 <div class="filter-group">
                     <label for="filter-select" class="sr-only">Filter by type</label>
                     <div class="custom-select-wrapper">

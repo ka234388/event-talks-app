@@ -6,13 +6,16 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-# Feed URL
-FEED_URL = "https://docs.cloud.google.com/feeds/bigquery-release-notes.xml"
+# Feed URLs
+FEEDS = {
+    "vertex-ai": "https://docs.cloud.google.com/feeds/vertex-ai-release-notes.xml",
+    "bigquery": "https://docs.cloud.google.com/feeds/bigquery-release-notes.xml"
+}
 
-# In-memory cache for feed data
+# In-memory caches for each feed data
 _cache = {
-    "data": None,
-    "last_updated": None
+    "vertex-ai": {"data": None, "last_updated": None},
+    "bigquery": {"data": None, "last_updated": None}
 }
 
 def clean_html_content(content):
@@ -31,16 +34,16 @@ def clean_html_content(content):
         
     return str(soup)
 
-def parse_feed():
+def parse_feed(feed_url):
     """
     Fetches and parses the Atom XML feed from GCP.
     Splits each day's entry into separate items based on <h3> tags.
     """
     try:
-        response = requests.get(FEED_URL, timeout=15)
+        response = requests.get(feed_url, timeout=15)
         response.raise_for_status()
     except Exception as e:
-        print(f"Error fetching RSS feed: {e}")
+        print(f"Error fetching RSS feed from {feed_url}: {e}")
         return []
 
     try:
@@ -59,7 +62,7 @@ def parse_feed():
             if link_node is None:
                 link_node = entry.find("atom:link", ns)
             
-            entry_link = link_node.attrib.get("href") if link_node is not None else "https://cloud.google.com/bigquery/docs/release-notes"
+            entry_link = link_node.attrib.get("href") if link_node is not None else "https://cloud.google.com/vertex-ai/docs/release-notes"
             
             content_node = entry.find("atom:content", ns)
             if content_node is None or content_node.text is None:
@@ -132,23 +135,29 @@ def index():
 
 @app.route('/api/release-notes')
 def get_release_notes():
+    feed_type = request.args.get('feed', 'vertex-ai')
+    if feed_type not in FEEDS:
+        feed_type = 'vertex-ai'
+        
     force_refresh = request.args.get('refresh', 'false').lower() == 'true'
     
+    feed_cache = _cache[feed_type]
+    
     # Serve from cache if available and not forcing refresh
-    if not force_refresh and _cache["data"] is not None:
+    if not force_refresh and feed_cache["data"] is not None:
         return jsonify({
             "source": "cache",
-            "items": _cache["data"]
+            "items": feed_cache["data"]
         })
         
     # Fetch and parse
-    items = parse_feed()
+    items = parse_feed(FEEDS[feed_type])
     if items:
-        _cache["data"] = items
+        feed_cache["data"] = items
         
     return jsonify({
         "source": "live",
-        "items": items or _cache["data"] or []
+        "items": items or feed_cache["data"] or []
     })
 
 if __name__ == '__main__':
