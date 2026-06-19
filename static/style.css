@@ -1230,3 +1230,31 @@ body.light-theme .note-card.selected {
         margin-top: 0.5rem;
     }
 }
+
+/* ==========================================================================
+   SELECTED CARD BADGE STYLING
+   ========================================================================== */
+.selected-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    animation: fadeInBadge 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 0.25rem;
+}
+
+body.light-theme .selected-badge {
+    background: rgba(56, 189, 248, 0.06);
+    border-color: rgba(56, 189, 248, 0.2);
+}
+
+@keyframes fadeInBadge {
+    from { opacity: 0; transform: scale(0.9) translateY(-2px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}

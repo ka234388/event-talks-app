@@ -206,7 +206,8 @@ function renderFeed() {
         card.id = `card-${item.id}`;
         
         // Highlight active select state
-        if (state.selectedItem && state.selectedItem.id === item.id) {
+        const isSelected = state.selectedItem && state.selectedItem.id === item.id;
+        if (isSelected) {
             card.classList.add('selected');
         }
         
@@ -215,6 +216,7 @@ function renderFeed() {
                 <div class="badge-and-date">
                     <span class="type-badge">${item.type}</span>
                     <time class="date-text" datetime="${item.timestamp}">${item.date}</time>
+                    ${isSelected ? '<span class="selected-badge" title="Selected update for sharing"><i class="fa-solid fa-circle-check"></i> Selected</span>' : ''}
                 </div>
                 <div class="card-actions">
                     <button class="icon-btn copy-btn" title="Copy update text" data-id="${item.id}">
@@ -527,7 +529,11 @@ function exportToCSV() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', 'bigquery_release_notes.csv');
+        
+        // Dynamic filename based on active feed
+        const filename = `${state.activeFeed.replace('-', '_')}_release_notes.csv`;
+        link.setAttribute('download', filename);
+        
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -599,11 +605,12 @@ function initEvents() {
             elements.searchInput.value = '';
             elements.filterSelect.value = 'all';
             
-            // Dynamically update header titles, subtitles, and icons
+            // Dynamically update header titles, subtitles, placeholders, and icons
             if (state.activeFeed === 'vertex-ai') {
                 if (elements.headerTitle) elements.headerTitle.textContent = 'Vertex AI Release Hub';
                 const subtitle = document.querySelector('.app-header .subtitle');
                 if (subtitle) subtitle.textContent = 'Track Machine Learning & Computer Vision updates and draft posts instantly.';
+                if (elements.searchInput) elements.searchInput.placeholder = 'Search Vertex AI (e.g. AutoML, pipeline, vision, custom)...';
                 if (elements.headerLogoIcon) {
                     const iconEl = elements.headerLogoIcon.querySelector('i');
                     if (iconEl) iconEl.className = 'fa-solid fa-brain';
@@ -614,6 +621,7 @@ function initEvents() {
                 if (elements.headerTitle) elements.headerTitle.textContent = 'BigQuery Release Hub';
                 const subtitle = document.querySelector('.app-header .subtitle');
                 if (subtitle) subtitle.textContent = 'Track Data Warehouse & Analytics updates and draft posts instantly.';
+                if (elements.searchInput) elements.searchInput.placeholder = 'Search BigQuery (e.g. SQL, partitioning, metadata, load)...';
                 if (elements.headerLogoIcon) {
                     const iconEl = elements.headerLogoIcon.querySelector('i');
                     if (iconEl) iconEl.className = 'fa-solid fa-database';
@@ -685,7 +693,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initProgressRing();
     initEvents();
     
-    // Set initial logo style to match Vertex AI default
+    // Set initial placeholder & logo style to match Vertex AI default
+    if (elements.searchInput) {
+        elements.searchInput.placeholder = 'Search Vertex AI (e.g. AutoML, pipeline, vision, custom)...';
+    }
     if (elements.headerLogoIcon) {
         elements.headerLogoIcon.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)';
         elements.headerLogoIcon.style.boxShadow = '0 8px 16px -4px rgba(139, 92, 246, 0.4)';
